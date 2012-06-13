@@ -61,12 +61,11 @@ rt_node_new(uint8_t c, char *key, size_t keylen)
 	rt_node *n = NULL;
 	uint8_t s = c > 0 && c < NODE_LEAF_MAX ? c : NODE_INIT_SIZE;
 	size_t sz = sizeof(*n);
-	n = malloc(sz);
+	n = calloc(1,sz+1);
 	if(!n) return NULL;
-	memset(n,0,sz);
 	n->lalloc = s;
 	n->klen = keylen;
-	n->leaf = malloc(s*sizeof(n));
+	n->leaf = calloc(s,sizeof(n));
 	if(!n->leaf) goto fail;
 	if(key && keylen>0) {
 		n->key = malloc(keylen);
@@ -105,22 +104,34 @@ _maxmatch(const char *s1, const char *s2, size_t len)
 		*m1++; *m2++;
 	}
 	ret = m1 - s1;
-#ifdef RT_DEBUG
-	printf("max_match(%s,%s) = %.*s\n",s1,s2,ret,s1);
-#endif
 	return ret;
 }
 
-static rt_node *
-rt_node_find(rt_node *n,char *key, uint8_t lkey, int add)
+static int
+_cmp_nodes(const void *v1, const void *v2)
 {
-	rt_node *node;
+	register const char *n1 = (const char *)v1;
+	register const rt_node *n2 = *(const rt_node **)v2;
+	return n1[0] - n2->key[0];
+}
+
+static rt_node *
+rt_node_find(rt_node *n,char *key, size_t lkey, int add)
+{
+	rt_node *node = NULL;
 	/* printf("LOG: rt_node_find(n,\"%.*s\",%d,%d)\n",lkey,key,lkey,add); */
 	if(!n || lkey < 1 || !key) return NULL;
 	/* if we are only adding, we can do a more efficient binary search */
 	if(!add) {
-		/** @todo bsearch */
-		return NULL;
+		size_t mm,mlen;
+		if(n->lcnt == 0 || !n->leaf) return NULL;
+		node = *(rt_node **)bsearch(key,n->leaf,n->lcnt,sizeof(void*),_cmp_nodes);
+		if(node==NULL) return NULL;
+		mlen = node->klen < lkey ? node->klen : lkey;
+		mm = _maxmatch(node->key,key,mlen);
+		if(mm < node->klen) return NULL;
+		else if(mm==mlen && node->klen==lkey) return node;
+		else return rt_node_find(node,key+mm,lkey-mm,add);
 	}
 
 	/* otherwise, do a tail insertion sort */
@@ -146,11 +157,8 @@ rt_node_find(rt_node *n,char *key, uint8_t lkey, int add)
 			n->leaf = rt;
 		}
 		index = &n->leaf[i];
-		while(i>=0) {
+		while(i >= 0) {
 			/* Only need to compare first char */
-#ifdef RT_DEBUG
-			printf("[%d] key=%s index=%s\n",i,key,(*index)->key);
-#endif
 			diff = key[0] - (*index)->key[0];
 			if(diff > 0) {
 				node = rt_node_new(0,key,lkey);
@@ -174,22 +182,31 @@ rt_node_find(rt_node *n,char *key, uint8_t lkey, int add)
 				 */
 				rt_node *p = *index, *child;
 				size_t mm = _maxmatch(p->key, key, p->klen < lkey ? p->klen : lkey);
-				char *pkey;
-				/* if matches current leaf node, recurse */
 				if(mm < p->klen) {
+					rt_node **tmp;
 					/* otherwise, split
 					 * add child and update this node */
-					child = rt_node_find(p,p->key+mm,p->klen-mm,1);
+					child = rt_node_new(0,p->key+mm,p->klen-mm);
 					if(!child) {
 						/* failed to split and add child node */
 						return NULL;
 					}
+					tmp = calloc(NODE_INIT_SIZE,sizeof(rt_node *));
+					if(!tmp) return NULL;
+					child->lalloc=p->lalloc;
+					child->lcnt = p->lcnt;
+					child->leaf = p->leaf;
 					child->value = p->value;
 					p->klen = mm;
 					p->key[mm] = 0;
 					p->value = NULL;
+					p->leaf = tmp;
+					p->lalloc = NODE_INIT_SIZE;
+					p->lcnt = 1;
+					p->leaf[0] = child;
 				}
-				return rt_node_find(p,key+mm,lkey-mm,add);
+				if(mm==lkey && p->klen==lkey) return p;
+				else return rt_node_find(p,key+mm,lkey-mm,add);
 			}
 			i--;*index--;
 		}
@@ -240,8 +257,9 @@ void
 rt_tree_print(rt_tree *t)
 {
 	int i;
-	rt_node *l;
-	for(i=0,l=*t->leaf;i<t->lcnt;i++,l++) rt_node_print(l,0);
+	rt_node **l;
+	if(!t) printf("NULL");
+	for(i=0,l=t->leaf;i<t->lcnt;i++,*l++) rt_node_print(*l,0);
 }
 
 #ifdef RT_DEBUG
@@ -250,7 +268,7 @@ main(int argc, char **argv)
 {
 	rt_tree *t;
 	char **arg;
-	int i;
+	int i, succ=0;
 
 	t = rt_tree_new();
 	if(!t) {
@@ -259,10 +277,22 @@ main(int argc, char **argv)
 	}
 	for(i=1,arg=++argv;i<argc;i++,arg++)
 	{
-		printf("arg[%d] = %s\n",i,*arg);
-		rt_tree_add(t, *arg, strlen(*arg), *arg);
-		rt_tree_print(t);
+		if(rt_tree_add(t, *arg, strlen(*arg), *arg))
+			succ++;
+		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 	}
+	printf("ADD Passed: %d of %d\n",succ,argc-1);
+	rt_tree_print(t);
+	succ = 0;
+	for(i=argc-1,arg--;i>0;i--,arg--)
+	{
+		char *val;
+		if(rt_tree_find(t, *arg, strlen(*arg), (void **)&val)) {
+			if(!strcmp(val,*arg)) succ++;
+			else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
+		} else printf("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);
+	}
+	printf("SEARCH Passed: %d of %d\n",succ,argc-1);
 
 	rt_tree_free(t);
 	return 0;
