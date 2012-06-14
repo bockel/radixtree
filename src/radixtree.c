@@ -49,11 +49,9 @@ rt_node_free(const rt_tree *t, rt_node *n)
 	for(i=0,l=n->leaf;i<n->lcnt;i++,*l++)
 		rt_node_free(t, *l);
 	if(n->value && t->vfree) t->vfree(n->value);
-	if(t->free) {
-		if(n->key) t->free(n->key);
-		if(n->leaf) t->free(n->leaf);
-		t->free(n);
-	}
+	if(n->key) t->free(n->key);
+	if(n->leaf) t->free(n->leaf);
+	t->free(n);
 }
 
 static rt_node *
@@ -72,9 +70,10 @@ rt_node_new(const rt_tree *t, uint8_t c, const char *key, size_t keylen)
 	n->leaf = t->malloc(s*sizeof(n));
 	if(!n->leaf) goto fail;
 	if(key && keylen>0) {
-		n->key = t->malloc(keylen);
+		n->key = t->malloc(keylen+1);
 		if(!n->key) goto fail;
 		memcpy(n->key,key,keylen);
+		n->key[keylen] = 0;
 	}
 	return n;
 fail:
@@ -124,7 +123,7 @@ rt_node_find(	const rt_tree *root, rt_node *n,
 		const char *key, size_t lkey, int add)
 {
 	rt_node *node = NULL;
-	/* printf("LOG: rt_node_find(n,\"%.*s\",%d,%d)\n",lkey,key,lkey,add); */
+	/* printf("LOG: rt_node_find(node(%s),\"%.*s\",%d,%d)\n",n->key,lkey,key,lkey,add); */
 	if(!root || !n || lkey < 1 || !key) return NULL;
 	/* if we are only adding, we can do a more efficient binary search */
 	if(!add) {
@@ -156,8 +155,15 @@ rt_node_find(	const rt_tree *root, rt_node *n,
 			rt_node **rt;
 			ns *= 2;
 			if(ns>ALPHABET_SIZE) ns = ALPHABET_SIZE;
-			rt = root->realloc(n->leaf,ns*sizeof(rt));
-			if(!rt) return NULL;
+			if(root->realloc) {
+				rt = root->realloc(n->leaf,ns*sizeof(rt));
+				if(!rt) return NULL;
+			} else {
+				rt = root->malloc(ns*sizeof(rt));
+				if(!rt) return NULL;
+				memcpy(rt,n->leaf,n->lalloc);
+				root->free(n->leaf);
+			}
 			n->lalloc = ns;
 			n->leaf = rt;
 		}
@@ -168,22 +174,24 @@ rt_node_find(	const rt_tree *root, rt_node *n,
 			if(diff > 0) {
 				node = rt_node_new(root,0,key,lkey);
 				if(!node) return NULL;
-				n->leaf[i+1] = node;
+				memmove(index+2,index+1,sizeof(void*)*(n->lcnt-i-1));
+				index[1] = node;
 				n->lcnt++;
 				break;
 			} else if(diff < 0) {
-				n->leaf[i+1] = *index;
 				if(i==0) {
 					node = rt_node_new(root,0,key,lkey);
 					if(!node) return NULL;
-					n->leaf[i] = node;
+					memmove(index+1,index,n->lcnt*sizeof(void*));
+					*index = node;
 					n->lcnt++;
 					break;
 				}
 			} else {
 				/*
 				 * if matches, recurse to next node level
-				 * otherwise,  update this node to have the shared string; then add children for different suffixes
+				 * otherwise,  update this node to have the shared string;
+				 * then add children for different suffixes
 				 */
 				rt_node *p = *index, *child;
 				size_t mm = _maxmatch(p->key, key, p->klen < lkey ? p->klen : lkey);
@@ -196,22 +204,25 @@ rt_node_find(	const rt_tree *root, rt_node *n,
 						/* failed to split and add child node */
 						return NULL;
 					}
-					tmp = calloc(NODE_INIT_SIZE,sizeof(rt_node *));
+					tmp = root->malloc(NODE_INIT_SIZE*sizeof(rt_node *));
 					if(!tmp) return NULL;
-					child->lalloc=p->lalloc;
-					child->lcnt = p->lcnt;
-					child->leaf = p->leaf;
-					child->value = p->value;
-					p->klen = mm;
+					child->lalloc = p->lalloc;
+					child->lcnt   = p->lcnt;
+					child->leaf   = p->leaf;
+					child->value  = p->value;
+					p->klen    = mm;
 					p->key[mm] = 0;
-					p->value = NULL;
-					p->leaf = tmp;
-					p->lalloc = NODE_INIT_SIZE;
-					p->lcnt = 1;
+					p->value   = NULL;
+					p->leaf    = tmp;
+					p->lalloc  = NODE_INIT_SIZE;
+					p->lcnt    = 1;
 					p->leaf[0] = child;
 				}
-				if(mm==lkey && p->klen==lkey) return p;
-				else return rt_node_find(root,p,key+mm,lkey-mm,add);
+				if(mm==lkey && p->klen==lkey) {
+					return p;
+				} else {
+					return rt_node_find(root,p,key+mm,lkey-mm,add);
+				}
 			}
 			i--;*index--;
 		}
@@ -226,7 +237,7 @@ rt_tree_new(	void* (*_malloc)(size_t),
 		void (*_vfree)(void*))
 {
 	rt_tree *t = NULL;
-	if(!_malloc) return NULL;
+	if(!_malloc || !_free) return NULL;
 	t = _malloc(sizeof(rt_tree));
 	if(!t) return NULL;
 	t->malloc = _malloc;
@@ -242,9 +253,7 @@ rt_tree_free(rt_tree *t)
 {
 	if(!t) return;
 	rt_node_free(t,t->root);
-	if(t->free) {
-		t->free(t);
-	}
+	t->free(t);
 }
 
 int
