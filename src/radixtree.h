@@ -27,7 +27,7 @@ extern "C" {
 #define NODE_INIT_SIZE 6
 
 #ifndef ALPHABET
-#define ALPHABET "01234567890_abcdefghijklmnopqrstuvwxyz"
+#define ALPHABET "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 #endif
 
 #define ALPHABET_SIZE (strlen(ALPHABET))
