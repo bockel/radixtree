@@ -33,6 +33,7 @@ struct _node {
 };
 
 struct _rt_tree {
+	uint8_t alsize;
 	void (*free)(void *);
 	void (*vfree)(void *);
 	void * (* malloc)(size_t);
@@ -58,13 +59,15 @@ static rt_node *
 rt_node_new(const rt_tree *t, uint8_t c, const char *key, size_t keylen)
 {
 	rt_node *n = NULL;
-	uint8_t s = c > 0 && c < NODE_LEAF_MAX ? c : NODE_INIT_SIZE;
+	uint8_t s = c;
 	size_t sz = sizeof(*n);
 	if(!t || !t->malloc) return NULL;
 	/* n = malloc(sz); */
 	n = t->malloc(sz);
 	if(!n) return NULL;
 	memset(n,0,sz);
+	if(s < 1) s = NODE_INIT_SIZE;
+	else if(s > t->alsize) s = t->alsize;
 	n->lalloc = s;
 	n->klen = keylen;
 	n->leaf = t->malloc(s*sizeof(n));
@@ -110,14 +113,6 @@ _maxmatch(const char *s1, const char *s2, size_t len)
 	return ret;
 }
 
-static int
-_cmp_nodes(const void *v1, const void *v2)
-{
-	register const char *n1 = (const char *)v1;
-	register const rt_node *n2 = *(const rt_node **)v2;
-	return n1[0] - n2->key[0];
-}
-
 /*
  * Implement a custom binary search that returns the last search location.
  * This location is either a match or the location where the node should be inserted +-1
@@ -147,7 +142,7 @@ rt_node_grow(const rt_tree *t, rt_node *n)
 	size_t ns = n->lalloc;
 	rt_node **rt;
 	ns *= 2;
-	if(ns>ALPHABET_SIZE) ns = ALPHABET_SIZE;
+	if(ns>t->alsize) ns = t->alsize;
 	if(t->realloc) {
 		rt = t->realloc(n->leaf,ns*sizeof(rt));
 		if(!rt) return 0;
@@ -238,19 +233,27 @@ rt_node_find(	const rt_tree *root, rt_node *n,
 }
 
 rt_tree *
-rt_tree_new(	void* (*_malloc)(size_t),
+rt_tree_new(uint8_t albet_size, void (*_vfree)(void*))
+{
+	return rt_tree_custom(albet_size, malloc, realloc, free, _vfree);
+}
+
+rt_tree *
+rt_tree_custom(	uint8_t albet_size,
+		void* (*_malloc)(size_t),
 		void* (*_realloc)(void *,size_t),
 		void (*_free)(void*),
 		void (*_vfree)(void*))
 {
 	rt_tree *t = NULL;
-	if(!_malloc || !_free) return NULL;
+	if(!_malloc || !_free || albet_size<1) return NULL;
 	t = _malloc(sizeof(rt_tree));
 	if(!t) return NULL;
 	t->malloc = _malloc;
 	t->realloc = _realloc;
 	t->free = _free;
 	t->vfree = _vfree;
+	t->alsize = albet_size > MAX_ALPHABET_SIZE ? MAX_ALPHABET_SIZE : albet_size;
 	t->root = rt_node_new(t,0,NULL,0);
 	return t;
 }
@@ -272,7 +275,7 @@ rt_tree_find(const rt_tree *t, const char *key, uint8_t lkey, void ** value)
 		return 0;
 	}
 	n = rt_node_find(t,t->root,key,lkey,0);
-	if(n) {
+	if(n && n->value) {
 		*value = n->value;
 		return 1;
 	} else {

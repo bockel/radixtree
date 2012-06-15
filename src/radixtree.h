@@ -25,20 +25,20 @@ extern "C" {
 #include <string.h>
 
 #define NODE_INIT_SIZE 6
+#define MAX_ALPHABET_SIZE 128
 
-#ifndef ALPHABET
-#define ALPHABET "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-#endif
-
-#define ALPHABET_SIZE (strlen(ALPHABET))
-#define NODE_LEAF_MAX  ALPHABET_SIZE
 
 typedef struct _rt_tree rt_tree;
 
-rt_tree * rt_tree_new(	void* (*_malloc)(size_t),
+rt_tree * rt_tree_new(	uint8_t albet_size,
+		void (*_vfree)(void*));
+
+rt_tree * rt_tree_custom(	uint8_t albet_size,
+		void* (*_malloc)(size_t),
 		void* (*_realloc)(void *,size_t),
 		void (*_free)(void*),
 		void (*_vfree)(void*));
+
 void rt_tree_free(rt_tree *t);
 
 int rt_tree_find(const rt_tree *t, const char *key, uint8_t lkey, void ** value);
