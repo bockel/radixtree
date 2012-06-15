@@ -118,115 +118,122 @@ _cmp_nodes(const void *v1, const void *v2)
 	return n1[0] - n2->key[0];
 }
 
+/*
+ * Implement a custom binary search that returns the last search location.
+ * This location is either a match or the location where the node should be inserted +-1
+ */
+static int
+rt_bsearch(const char *key, const rt_node **leaf, size_t leafcnt, rt_node ***match)
+{
+	size_t left = 0, right = leafcnt, index;
+	int cmp;
+	while(left < right)
+	{
+		index = (right+left)/2;
+		cmp = *key - leaf[index]->key[0];
+		if(cmp < 0)
+			right = index;
+		else if (cmp > 0)
+			left = index+1;
+		else break;
+	}
+	*match = (rt_node **)&leaf[index];
+	return cmp;
+}
+
+static size_t
+rt_node_grow(const rt_tree *t, rt_node *n)
+{
+	size_t ns = n->lalloc;
+	rt_node **rt;
+	ns *= 2;
+	if(ns>ALPHABET_SIZE) ns = ALPHABET_SIZE;
+	if(t->realloc) {
+		rt = t->realloc(n->leaf,ns*sizeof(rt));
+		if(!rt) return 0;
+	} else {
+		rt = t->malloc(ns*sizeof(rt));
+		if(!rt) return 0;
+		memcpy(rt,n->leaf,n->lalloc);
+		t->free(n->leaf);
+	}
+	n->lalloc = ns;
+	n->leaf = rt;
+	return ns;
+}
+
 static rt_node *
 rt_node_find(	const rt_tree *root, rt_node *n,
 		const char *key, size_t lkey, int add)
 {
-	rt_node *node = NULL;
+	rt_node *node = NULL, **p;
+	int diff;
 	/* printf("LOG: rt_node_find(node(%s),\"%.*s\",%d,%d)\n",n->key,lkey,key,lkey,add); */
 	if(!root || !n || lkey < 1 || !key) return NULL;
-	/* if we are only adding, we can do a more efficient binary search */
-	if(!add) {
-		size_t mm,mlen;
-		if(n->lcnt == 0 || !n->leaf) return NULL;
-		node = *(rt_node **)bsearch(key,n->leaf,n->lcnt,sizeof(void*),_cmp_nodes);
-		if(node==NULL) return NULL;
-		mlen = node->klen < lkey ? node->klen : lkey;
-		mm = _maxmatch(node->key,key,mlen);
-		if(mm < node->klen) return NULL;
-		else if(mm==mlen && node->klen==lkey) return node;
-		else return rt_node_find(root,node,key+mm,lkey-mm,add);
-	}
 
-	/* otherwise, do a tail insertion sort */
-	if(n->lcnt == 0)
-	{
+	if(n->lcnt == 0) {
+		if(!add) return NULL;
 		node = rt_node_new(root,0,key,lkey);
 		if(!node) return NULL;
 		n->leaf[0] = node;
 		n->lcnt++;
-	} else {
-		/* Search for the key
-		 * If not found, return the location for it to be added */
-		int i = n->lcnt-1, diff;
-		rt_node **index;
-		if(n->lcnt >= n->lalloc) {
-			size_t ns = n->lalloc;
-			rt_node **rt;
-			ns *= 2;
-			if(ns>ALPHABET_SIZE) ns = ALPHABET_SIZE;
-			if(root->realloc) {
-				rt = root->realloc(n->leaf,ns*sizeof(rt));
-				if(!rt) return NULL;
-			} else {
-				rt = root->malloc(ns*sizeof(rt));
-				if(!rt) return NULL;
-				memcpy(rt,n->leaf,n->lalloc);
-				root->free(n->leaf);
-			}
-			n->lalloc = ns;
-			n->leaf = rt;
-		}
-		index = &n->leaf[i];
-		while(i >= 0) {
-			/* Only need to compare first char */
-			diff = key[0] - (*index)->key[0];
-			if(diff > 0) {
-				node = rt_node_new(root,0,key,lkey);
-				if(!node) return NULL;
-				memmove(index+2,index+1,sizeof(void*)*(n->lcnt-i-1));
-				index[1] = node;
-				n->lcnt++;
-				break;
-			} else if(diff < 0) {
-				if(i==0) {
-					node = rt_node_new(root,0,key,lkey);
-					if(!node) return NULL;
-					memmove(index+1,index,n->lcnt*sizeof(void*));
-					*index = node;
-					n->lcnt++;
-					break;
-				}
-			} else {
-				/*
-				 * if matches, recurse to next node level
-				 * otherwise,  update this node to have the shared string;
-				 * then add children for different suffixes
-				 */
-				rt_node *p = *index, *child;
-				size_t mm = _maxmatch(p->key, key, p->klen < lkey ? p->klen : lkey);
-				if(mm < p->klen) {
-					rt_node **tmp;
-					/* otherwise, split
-					 * add child and update this node */
-					child = rt_node_new(root,0,p->key+mm,p->klen-mm);
-					if(!child) {
-						/* failed to split and add child node */
-						return NULL;
-					}
-					tmp = root->malloc(NODE_INIT_SIZE*sizeof(rt_node *));
-					if(!tmp) return NULL;
-					child->lalloc = p->lalloc;
-					child->lcnt   = p->lcnt;
-					child->leaf   = p->leaf;
-					child->value  = p->value;
-					p->klen    = mm;
-					p->key[mm] = 0;
-					p->value   = NULL;
-					p->leaf    = tmp;
-					p->lalloc  = NODE_INIT_SIZE;
-					p->lcnt    = 1;
-					p->leaf[0] = child;
-				}
-				if(mm==lkey && p->klen==lkey) {
-					return p;
-				} else {
-					return rt_node_find(root,p,key+mm,lkey-mm,add);
-				}
-			}
-			i--;*index--;
-		}
+		return node;
 	}
+
+	/* Search for the key
+	 * If not found, return the location for it to be added */
+	diff = rt_bsearch(key,(const rt_node **)n->leaf,n->lcnt,&p);
+	if(!index || !index) return NULL;
+	if(diff==0) /* found (partial?) match */
+	{
+		rt_node *index = *p, *child;
+		size_t mm = _maxmatch(index->key, key, index->klen < lkey ? index->klen : lkey);
+		if(add) {
+			if(n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL;
+			if(mm < index->klen) {
+				rt_node **tmp;
+				/* otherwise, split
+				 * add child and update this node */
+				child = rt_node_new(root,0,index->key+mm,index->klen-mm);
+				if(!child) {
+					/* failed to split and add child node */
+					return NULL;
+				}
+				tmp = root->malloc(NODE_INIT_SIZE*sizeof(rt_node *));
+				if(!tmp) return NULL;
+				child->lalloc = index->lalloc;
+				child->lcnt   = index->lcnt;
+				child->leaf   = index->leaf;
+				child->value  = index->value;
+				index->klen    = mm;
+				index->key[mm] = 0;
+				index->value   = NULL;
+				index->leaf    = tmp;
+				index->lalloc  = NODE_INIT_SIZE;
+				index->lcnt    = 1;
+				index->leaf[0] = child;
+			}
+		}
+		if(mm==lkey && index->klen==lkey) {
+			return index;
+		} else {
+			return rt_node_find(root,index,key+mm,lkey-mm,add);
+		}
+	} else {
+		if(!add) return NULL;
+		if(n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL;
+		node = rt_node_new(root,0,key,lkey);
+		if(!node) return NULL;
+		if(diff > 0) {
+			memmove(p+2,p+1,sizeof(p)*(n->lcnt-(p - n->leaf)-1));
+			p[1] = node;
+		} else {
+			memmove(p+1,p,sizeof(p)*(n->lcnt-(p - n->leaf)));
+			*p = node;
+		}
+		n->lcnt++;
+	}
+
 	return node;
 }
 
