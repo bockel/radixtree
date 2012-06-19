@@ -25,33 +25,34 @@ int
 main(int argc, char **argv)
 {
 	rt_tree *t;
-	char **arg;
+	char **arg, *val;
 	int i, succ=0;
+	rt_iter *iter;
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
 		printf("ERROR: Could not create rt_tree... Exiting\n");
 		return 1;
 	}
-	for(i=1,arg=argv+1;i<argc;i++,arg++)
+	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
 	{
 		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
 			succ++;
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 	}
-	printf("ADD Passed: %d of %d\n",succ,argc-1);
+	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
-	succ = 0;
-	for(i=argc-1,arg--;i>0;i--,arg--)
-	{
-		char *val;
-		if(rt_tree_get(t, *arg, strlen(*arg), (void **)&val)) {
-			if(!strcmp(val,*arg)) succ++;
-			else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
-		} else printf("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);
-	}
-	printf("SEARCH Passed: %d of %d\n",succ,argc-1);
+	printf("Searching for \"%s\"...\n", *arg);
+	iter = rt_tree_find(t, *arg, strlen(*arg));
+	succ=0;
+	if(iter) {
+		while(rt_iter_next(iter)) {
+			succ++;
+			printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),rt_iter_value(iter));
+		}
+	} else printf("FAILED\n");
 
 	rt_tree_free(t);
-	return 0;
+	return succ;
 }
+

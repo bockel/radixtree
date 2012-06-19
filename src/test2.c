@@ -1,4 +1,5 @@
 
+
 /*
  * Copyright 2012 William Heinbockel
  *
@@ -35,14 +36,14 @@ main(int argc, char **argv)
 	}
 	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
 	{
-		if(rt_tree_add(t, *arg, strlen(*arg), *arg))
+		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
 			succ++;
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 	}
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
 	printf("Searching for \"%s\"... ", *arg);
-	succ = rt_tree_find(t, *arg, strlen(*arg), (void **)&val);
+	succ = rt_tree_get(t, *arg, strlen(*arg), (void **)&val);
 	if(succ) {
 		if(!val) printf("FAILED (%d, got NULL)\n",succ);
 		else if(!strcmp(val,*arg)) printf("SUCCESS\n");

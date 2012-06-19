@@ -26,9 +26,11 @@ extern "C" {
 
 #define NODE_INIT_SIZE 6
 #define MAX_ALPHABET_SIZE 128
-
+#define MAX_KEY_LENGTH 128
+#define WILDCARD_CHAR '*'
 
 typedef struct _rt_tree rt_tree;
+typedef struct _rt_iter rt_iter;
 
 rt_tree * rt_tree_new(	uint8_t albet_size,
 		void (*_vfree)(void*));
@@ -41,9 +43,14 @@ rt_tree * rt_tree_custom(	uint8_t albet_size,
 
 void rt_tree_free(rt_tree *t);
 
-int rt_tree_find(const rt_tree *t, const char *key, uint8_t lkey, void ** value);
-int rt_tree_add(const rt_tree *t, const char *key, uint8_t lkey, void *value);
+int rt_tree_get(const rt_tree *t, const char *key, size_t lkey, void ** value);
+int rt_tree_set(const rt_tree *t, const char *key, size_t lkey, void *value);
 void rt_tree_print(const rt_tree *t);
+
+rt_iter *rt_tree_find(const rt_tree *t, const char *key, size_t lkey);
+int rt_iter_next(rt_iter *iter);
+const char *rt_iter_key(const rt_iter *iter);
+const void *rt_iter_value(const rt_iter *iter);
 
 #ifdef __cplusplus
 }
