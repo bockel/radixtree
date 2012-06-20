@@ -1,5 +1,4 @@
 
-
 /*
  * Copyright 2012 William Heinbockel
  *
@@ -26,8 +25,9 @@ int
 main(int argc, char **argv)
 {
 	rt_tree *t;
-	char **arg, *val;
+	char **arg;
 	int i, succ=0;
+	rt_iter *iter;
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
@@ -42,14 +42,17 @@ main(int argc, char **argv)
 	}
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
-	printf("Searching for \"%s\"... ", *arg);
-	succ = rt_tree_get(t, *arg, strlen(*arg), (void **)&val);
-	if(succ) {
-		if(!val) printf("FAILED (%d, got NULL)\n",succ);
-		else if(!strcmp(val,*arg)) printf("SUCCESS\n");
-		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
-	} else printf("FAILED\n",*arg,i);
+	printf("Searching for \"%s\"...\n", *arg);
+	iter = rt_tree_find(t, *arg, strlen(*arg));
+	succ=0;
+	if(iter) {
+		while(rt_iter_next(iter)) {
+			succ++;
+			printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),(char *)rt_iter_value(iter));
+		}
+	} else printf("FAILED\n");
 
 	rt_tree_free(t);
-	return 0;
+	return succ;
 }
+

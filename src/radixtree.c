@@ -54,7 +54,7 @@ rt_node_free(const rt_tree *t, rt_node *n)
 	uint8_t i;
 	rt_node **l;
 	if(!n || !t) return;
-	for(i=0,l=n->leaf;i<n->lcnt;i++,*l++)
+	for(i=0,l=n->leaf;i<n->lcnt;i++,l++)
 		rt_node_free(t, *l);
 	if(n->value && t->vfree) t->vfree(n->value);
 	if(n->key) t->free(n->key);
@@ -69,7 +69,7 @@ rt_node_new(const rt_tree *t, uint8_t c, const char *key, size_t keylen)
 	uint8_t s = c;
 	size_t sz = sizeof(*n);
 	if(!t || !t->malloc) return NULL;
-	/* n = malloc(sz); */
+
 	n = t->malloc(sz);
 	if(!n) return NULL;
 	memset(n,0,sz);
@@ -99,11 +99,11 @@ rt_node_print(rt_node *n, int depth)
 	for(i=0;i<depth;i++) printf("\t");
 	if(n)
 	{
-		if(n->key) printf("\"%.*s\"",n->klen,n->key);
+		if(n->key) printf("\"%.*s\"",(int)n->klen,n->key);
 		else       printf("NULL");
-		if(n->value) printf(" = \"%s\"\n",n->value);
+		if(n->value) printf(" = addr(%p)\n",n->value);
 		else         printf(" = NULL\n");
-		for(i=0,l=n->leaf;i<n->lcnt;i++,*l++) rt_node_print(*l,depth+1);
+		for(i=0,l=n->leaf;i<n->lcnt;i++,l++) rt_node_print(*l,depth+1);
 	} else printf("NULL\n");
 }
 
@@ -112,12 +112,10 @@ _maxmatch(const char *key, const char *match, size_t len)
 {
 	register char *m1 = (char *)key, *m2 = (char *)match;
 	char *me1 = m1+len, *me2 = m2+len;
-	size_t ret;
 	while(*m1 == *m2 && m1<me1 && m2<me2) {
-		*m1++; *m2++;
+		m1++; m2++;
 	}
-	ret = m1 - key;
-	return ret;
+	return m1-key;
 }
 
 /*
@@ -255,7 +253,7 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 				index->lcnt    = 1;
 				index->leaf[0] = child;
 				/* need to update child parent refs, if necessary */
-				for(i=0,tmp=child->leaf;i<child->lcnt&&*tmp;i++,*tmp++)
+				for(i=0,tmp=child->leaf;i<child->lcnt&&*tmp;i++,tmp++)
 					(*tmp)->parent=child;
 			}
 		}
@@ -357,7 +355,7 @@ rt_tree_print(const rt_tree *t)
 	rt_node *r, **l;
 	if(!t || !t->root) printf("NULL");
 	r = t->root;
-	for(i=0,l=r->leaf;i < r->lcnt;i++,*l++) rt_node_print(*l,0);
+	for(i=0,l=r->leaf;i < r->lcnt;i++,l++) rt_node_print(*l,0);
 }
 
 rt_iter *
@@ -393,7 +391,7 @@ rt_iter_next(rt_iter *iter)
 		if(c->lcnt > 0) {
 			rt_bsearch(pkey,(const rt_node **)c->leaf,c->lcnt,&t);
 			while(t && *t && t<c->leaf+c->lcnt-1) {
-				*t++;
+				t++;
 				if((*t)->value != NULL) {
 					iter->curr = *t;
 					return 1;
@@ -423,7 +421,7 @@ rt_iter_key(const rt_iter *iter)
 	 * from the current node to the root.
 	 */
 	ptr = ret+MAX_KEY_LENGTH;
-	*ptr = 0; *ptr--;
+	*ptr = 0; ptr--;
 	n = iter->curr;
 	while(len>0 && n) {
 		i = n->klen;
