@@ -78,6 +78,10 @@ int rt_iter_next(rt_iter *iter);
 const char *rt_iter_key(const rt_iter *iter);
 const void *rt_iter_value(const rt_iter *iter);
 
+void rt_tree_map(rt_tree *tree, void *usr_ctxt,
+		void (*mapfunc)(void *usr_ctxt, char *key,
+			size_t klen, void *value));
+
 #ifdef __cplusplus
 }
 #endif

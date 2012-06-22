@@ -1,6 +1,6 @@
 RTDIR = ../src
 PROGS =
-UTILS = rt_build rt_search rt_iter
+UTILS = rt_build rt_search rt_iter rt_map
 CFLAGS = -I$(RTDIR)
 CFLAGS += -Wall
 CFLAGS += ${EXTRA_CFLAGS}

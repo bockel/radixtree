@@ -423,3 +423,34 @@ rt_iter_value(const rt_iter *iter)
 	return iter->curr ? iter->curr->value : NULL;
 }
 
+void rt_node_dfs(rt_node *node, char *key, size_t klen,
+		void *usr_ctxt,
+		void (*mapfunc)(void *, char *, size_t, void *))
+{
+	char *ptr = key+klen;
+	size_t len;
+	uint8_t child;
+	rt_node **next;
+	if(!node) return;
+	len = node->klen;
+	if(klen+len > MAX_KEY_LENGTH) len = MAX_KEY_LENGTH-klen;
+	strncpy(ptr,node->key,len);
+	ptr[len] = 0;
+	len += klen;
+	if(node->value) mapfunc(usr_ctxt, key, len, node->value);
+	for(child=0,next=node->leaf;child<node->lcnt;child++,next++)
+		rt_node_dfs(*next, key, len, usr_ctxt, mapfunc);
+}
+
+void rt_tree_map(rt_tree *tree, void *usr_ctxt,
+		void (*mapfunc)(void *usr_ctxt, char *key,
+			size_t klen, void *value))
+{
+	char key[MAX_KEY_LENGTH+1];
+	rt_node *n;
+	if(!mapfunc || !tree) return;
+	n = tree->root;
+	if(!n || n->lcnt < 1) return;
+	rt_node_dfs(n, key, 0, usr_ctxt, mapfunc);
+}
+
