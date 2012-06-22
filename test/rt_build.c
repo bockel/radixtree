@@ -30,28 +30,45 @@ main(int argc, char **argv)
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
+#ifdef DEBUG
 		printf("ERROR: Could not create rt_tree... Exiting\n");
-		return 1;
+#endif
+		return (-1);
 	}
 	for(i=1,arg=argv+1;i<argc;i++,arg++)
 	{
 		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
 			succ++;
+#ifdef DEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+#endif
 	}
+#ifdef DEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-1);
 	rt_tree_print(t);
+#endif
+	if(succ!=argc-1) {
+		rt_tree_free(t);
+		return (-1);
+	}
 	succ = 0;
 	for(i=argc-1,arg--;i>0;i--,arg--)
 	{
 		char *val;
 		if(rt_tree_get(t, *arg, strlen(*arg), (void **)&val)) {
 			if(!strcmp(val,*arg)) succ++;
+#ifdef DEBUG
 			else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
-		} else printf("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);
+#endif
+		}
+#ifdef DEBUG
+		else printf("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);
+#endif
 	}
+#ifdef DEBUG
 	printf("SEARCH Passed: %d of %d\n",succ,argc-1);
+#endif
 
 	rt_tree_free(t);
-	return 0;
+	return succ==argc-1;
 }

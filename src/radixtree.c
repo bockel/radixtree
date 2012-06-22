@@ -146,9 +146,10 @@ static size_t
 rt_node_grow(const rt_tree *t, rt_node *n)
 {
 	size_t ns = n->lalloc;
-	rt_node **rt;
+	rt_node **rt = NULL;
 	ns *= 2;
 	if(ns>t->alsize) ns = t->alsize;
+	if(ns == n->lalloc) return 0;
 	if(t->realloc) {
 		rt = t->realloc(n->leaf,ns*sizeof(rt));
 		if(!rt) return 0;
@@ -163,54 +164,26 @@ rt_node_grow(const rt_tree *t, rt_node *n)
 	return ns;
 }
 
-static rt_iter *
-rt_node_find(	const rt_tree *root, rt_node *n,
-		const char *key, const char *ptr, size_t lkey)
-{
-	static rt_iter iter;
-	rt_node **p;
-	int diff;
-
-	if(!root || !n || ptr > key+lkey || !key) return NULL;
-	if(*ptr == WILDCARD_CHAR) {
-		iter.root = n;
-		iter.curr = NULL;
-		iter.t = root;
-		return &iter;
-	}
-	diff = rt_bsearch(ptr,(const rt_node **)n->leaf,n->lcnt,&p);
-	if(!p) return NULL;
-	if(diff == 0)
-	{
-		rt_node *index = *p;
-		size_t len = lkey - ((ptr - key)/sizeof(char*));
-		size_t mm = _maxmatch(ptr,index->key, index->klen < len ? index->klen : len);
-		if(mm==len && index->klen==lkey) {
-			iter.root = index;
-			iter.curr = NULL;
-			iter.t = root;
-
-			return &iter;
-		} else {
-			return rt_node_find(root,index,key,ptr+mm,lkey);
-		}
-	}
-
-	return NULL;
-}
+typedef enum {
+	NODE_SET,
+	NODE_GET,
+	NODE_PREFIX
+} rt_get_mode;
 
 static rt_node *
 rt_node_get(	const rt_tree *root, rt_node *n,
-		const char *key, size_t lkey, int add)
+		const char *key, const char *ptr,
+		size_t lkey, rt_get_mode mode)
 {
 	rt_node *node = NULL, **p;
+	size_t len;
 	int diff;
-	/* printf("LOG: rt_node_get(node(%s),\"%.*s\",%d,%d)\n",n->key,lkey,key,lkey,add); */
-	if(!root || !n || lkey < 1 || !key) return NULL;
+	if(!root || !n || !key || !ptr || ptr > key+lkey) return NULL;
 
+	len = lkey - (ptr - key);
 	if(n->lcnt == 0) {
-		if(!add) return NULL;
-		node = rt_node_new(root,0,key,lkey);
+		if(mode!=NODE_SET) return NULL;
+		node = rt_node_new(root,0,ptr,len);
 		if(!node) return NULL;
 		n->leaf[0] = node;
 		node->parent = n;
@@ -220,14 +193,14 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 
 	/* Search for the key
 	 * If not found, return the location for it to be added */
-	diff = rt_bsearch(key,(const rt_node **)n->leaf,n->lcnt,&p);
+	diff = rt_bsearch(ptr,(const rt_node **)n->leaf,n->lcnt,&p);
 	if(!p) return NULL;
 	if(diff==0) /* found (partial?) match */
 	{
 		rt_node *index = *p, *child;
-		size_t mm = _maxmatch(index->key, key, index->klen < lkey ? index->klen : lkey);
-		if(add) {
-			if(n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL;
+		size_t mm = _maxmatch(ptr,index->key, index->klen < len ? index->klen : len);
+		if(mode == NODE_SET) {
+			/* if(n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL; */
 			if(mm < index->klen) {
 				rt_node **tmp;
 				int i;
@@ -257,28 +230,31 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 					(*tmp)->parent=child;
 			}
 		}
-		if(mm==lkey && index->klen==lkey) {
-			return index;
-		} else {
-			return rt_node_get(root,index,key+mm,lkey-mm,add);
-		}
-	} else {
-		if(!add) return NULL;
-		if(n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL;
-		node = rt_node_new(root,0,key,lkey);
+		if(mm==len && (index->klen==mm || (mode==NODE_PREFIX && index->klen>mm))) return index;
+		return rt_node_get(root,index,key,ptr+mm,lkey,mode);
+	} else if(mode==NODE_SET) {
+		size_t offset = p - n->leaf;
+		/* rt_node_grow may realloc the n->leaf location
+		 * 1 save the p offset
+		 * 2 redeclare p based on the new n->leaf location and offset
+		 */
+		if(mode == NODE_SET && n->lcnt >= n->lalloc && rt_node_grow(root,n)<1) return NULL;
+		p = n->leaf + offset;
+		node = rt_node_new(root,0,ptr,len);
 		if(!node) return NULL;
 		node->parent = n;
 		if(diff > 0) {
-			memmove(p+2,p+1,sizeof(p)*(n->lcnt-(p - n->leaf)-1));
+			memmove(p+2,p+1,sizeof(p)*(n->lcnt-offset-1));
 			p[1] = node;
 		} else {
-			memmove(p+1,p,sizeof(p)*(n->lcnt-(p - n->leaf)));
+			memmove(p+1,p,sizeof(p)*(n->lcnt-offset));
 			*p = node;
 		}
 		n->lcnt++;
+		return node;
 	}
 
-	return node;
+	return NULL;
 }
 
 rt_tree *
@@ -324,7 +300,7 @@ rt_tree_get(const rt_tree *t, const char *key, size_t lkey, void ** value)
 		*value = NULL;
 		return 0;
 	}
-	n = rt_node_get(t,t->root,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,0);
+	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_GET);
 	if(n && n->value) {
 		*value = n->value;
 		return 1;
@@ -339,7 +315,7 @@ rt_tree_set(const rt_tree *t, const char *key, size_t lkey, void *value)
 {
 	rt_node *n;
 	if(!t) return 0;
-	n = rt_node_get(t,t->root,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,1);
+	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_SET);
 	if(n) {
 		n->value = value;
 		return 1;
@@ -359,10 +335,17 @@ rt_tree_print(const rt_tree *t)
 }
 
 rt_iter *
-rt_tree_find(const rt_tree *t, const char *key, size_t lkey)
+rt_tree_prefix(const rt_tree *t, const char *prefix, size_t prefixlen)
 {
+	static rt_iter iter;
+	rt_node *result;
 	if(!t) return NULL;
-	return rt_node_find(t, t->root, key, key, lkey);
+	result = rt_node_get(t, t->root, prefix, prefix, prefixlen<MAX_KEY_LENGTH?prefixlen:MAX_KEY_LENGTH, NODE_PREFIX);
+	if(!result) return NULL;
+	iter.root = result;
+	iter.curr = NULL;
+	iter.t = t;
+	return &iter;
 }
 
 int

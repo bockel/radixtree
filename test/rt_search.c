@@ -31,25 +31,37 @@ main(int argc, char **argv)
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
+#ifdef DEBUG
 		printf("ERROR: Could not create rt_tree... Exiting\n");
-		return 1;
+#endif
+		return (-1);
 	}
 	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
 	{
 		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
 			succ++;
+#ifdef DEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+#endif
 	}
+#ifdef DEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
 	printf("Searching for \"%s\"... ", *arg);
+#endif
+	if(succ!=argc-2) {
+		rt_tree_free(t);
+		return (-1);
+	}
 	succ = rt_tree_get(t, *arg, strlen(*arg), (void **)&val);
+#ifdef DEBUG
 	if(succ) {
 		if(!val) printf("FAILED (%d, got NULL)\n",succ);
 		else if(!strcmp(val,*arg)) printf("SUCCESS\n");
 		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
 	} else printf("FAILED\n");
+#endif
 
 	rt_tree_free(t);
-	return 0;
+	return succ;
 }

@@ -15,6 +15,15 @@
  * limitations under the License.
  */
 
+/**
+ * @file radixtree.h
+ * @brief The exposed radixtree functions
+ *
+ * @todo map functionality (run method on every node)
+ * @todo support multiple wildcards in search
+ * @todo figure out how to handle key validation/modification -- keys with "illegal" chars; key.lower(); key.upper()
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,10 +33,27 @@ extern "C" {
 #include <stdint.h>
 #include <string.h>
 
-#define NODE_INIT_SIZE 6
+/**
+ * @def NODE_INIT_SIZE
+ * The number of default leafs a rt_tree node contains
+ */
+#define NODE_INIT_SIZE 4
+
+/**
+ * @def MAX_ALPHABET_SIZE
+ *
+ * The maximum alphabet size of the rt_tree node keys.
+ * This is used to place an upper bound on the node leaf size
+ */
 #define MAX_ALPHABET_SIZE 128
+
+/**
+ * @def MAX_KEY_LENGTH
+ *
+ * The maximum key length for a single key.
+ * This bounds the rt_tree depth and search space.
+ */
 #define MAX_KEY_LENGTH 128
-#define WILDCARD_CHAR '*'
 
 typedef struct _rt_tree rt_tree;
 typedef struct _rt_iter rt_iter;
@@ -47,7 +73,7 @@ int rt_tree_get(const rt_tree *t, const char *key, size_t lkey, void ** value);
 int rt_tree_set(const rt_tree *t, const char *key, size_t lkey, void *value);
 void rt_tree_print(const rt_tree *t);
 
-rt_iter *rt_tree_find(const rt_tree *t, const char *key, size_t lkey);
+rt_iter *rt_tree_prefix(const rt_tree *t, const char *prefix, size_t prefixlen);
 int rt_iter_next(rt_iter *iter);
 const char *rt_iter_key(const rt_iter *iter);
 const void *rt_iter_value(const rt_iter *iter);
