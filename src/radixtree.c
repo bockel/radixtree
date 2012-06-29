@@ -27,7 +27,7 @@ struct _node {
 	size_t klen;
 	uint8_t lcnt;
 	uint8_t lalloc;
-	char *key;
+	unsigned char *key;
 	void *value;
 	rt_node *parent;
 	struct _node **leaf;
@@ -63,7 +63,7 @@ rt_node_free(const rt_tree *t, rt_node *n)
 }
 
 static rt_node *
-rt_node_new(const rt_tree *t, uint8_t c, const char *key, size_t keylen)
+rt_node_new(const rt_tree *t, uint8_t c, const unsigned char *key, size_t keylen)
 {
 	rt_node *n = NULL;
 	uint8_t s = c;
@@ -108,10 +108,10 @@ rt_node_print(rt_node *n, int depth)
 }
 
 static size_t
-_maxmatch(const char *key, const char *match, size_t len)
+_maxmatch(const unsigned char *key, const unsigned char *match, size_t len)
 {
-	register char *m1 = (char *)key, *m2 = (char *)match;
-	char *me1 = m1+len, *me2 = m2+len;
+	register unsigned char *m1 = (unsigned char *)key, *m2 = (unsigned char *)match;
+	unsigned char *me1 = m1+len, *me2 = m2+len;
 	while(*m1 == *m2 && m1<me1 && m2<me2) {
 		m1++; m2++;
 	}
@@ -123,7 +123,7 @@ _maxmatch(const char *key, const char *match, size_t len)
  * This location is either a match or the location where the node should be inserted +-1
  */
 static int
-rt_bsearch(const char *key, const rt_node **leaf,
+rt_bsearch(const unsigned char *key, const rt_node **leaf,
 		size_t leafcnt, rt_node ***match)
 {
 	size_t left = 0, right = leafcnt, index;
@@ -172,7 +172,7 @@ typedef enum {
 
 static rt_node *
 rt_node_get(	const rt_tree *root, rt_node *n,
-		const char *key, const char *ptr,
+		const unsigned char *key, const unsigned char *ptr,
 		size_t lkey, rt_get_mode mode)
 {
 	rt_node *node = NULL, **p;
@@ -260,15 +260,15 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 rt_tree *
 rt_tree_new(uint8_t albet_size, void (*_vfree)(void*))
 {
-	return rt_tree_custom(albet_size, malloc, realloc, free, _vfree);
+	return rt_tree_custom(albet_size, _vfree, malloc, realloc, free);
 }
 
 rt_tree *
 rt_tree_custom(	uint8_t albet_size,
+		void (*_vfree)(void*),
 		void* (*_malloc)(size_t),
 		void* (*_realloc)(void *,size_t),
-		void (*_free)(void*),
-		void (*_vfree)(void*))
+		void (*_free)(void*))
 {
 	rt_tree *t = NULL;
 	if(!_malloc || !_free || albet_size<1) return NULL;
@@ -293,7 +293,8 @@ rt_tree_free(rt_tree *t)
 }
 
 int
-rt_tree_get(const rt_tree *t, const char *key, size_t lkey, void ** value)
+rt_tree_get(const rt_tree *t, const unsigned char *key,
+		size_t lkey, void ** value)
 {
 	rt_node *n;
 	if(!t) {
@@ -311,7 +312,8 @@ rt_tree_get(const rt_tree *t, const char *key, size_t lkey, void ** value)
 }
 
 int
-rt_tree_set(const rt_tree *t, const char *key, size_t lkey, void *value)
+rt_tree_set(const rt_tree *t, const unsigned char *key,
+		size_t lkey, void *value)
 {
 	rt_node *n;
 	if(!t) return 0;
@@ -335,7 +337,8 @@ rt_tree_print(const rt_tree *t)
 }
 
 rt_iter *
-rt_tree_prefix(const rt_tree *t, const char *prefix, size_t prefixlen)
+rt_tree_prefix(const rt_tree *t, const unsigned char *prefix,
+		size_t prefixlen)
 {
 	static rt_iter iter;
 	rt_node *result;
@@ -352,7 +355,7 @@ int
 rt_iter_next(rt_iter *iter)
 {
 	rt_node *c,**t;
-	char *pkey;
+	unsigned char *pkey;
 	if(!iter) return 0;
 	if(iter->curr == NULL) {
 		iter->curr = (rt_node*)iter->root;
@@ -393,11 +396,11 @@ rt_iter_next(rt_iter *iter)
 	return 0;
 }
 
-const char *
+const unsigned char *
 rt_iter_key(const rt_iter *iter)
 {
 	rt_node *n;
-	static char ret[MAX_KEY_LENGTH+1], *ptr;
+	static unsigned char ret[MAX_KEY_LENGTH+1], *ptr;
 	size_t len = MAX_KEY_LENGTH,i;
 	if(!iter || !iter->curr) return NULL;
 	/* This builds up the string by traversing the tree
@@ -423,18 +426,18 @@ rt_iter_value(const rt_iter *iter)
 	return iter->curr ? iter->curr->value : NULL;
 }
 
-void rt_node_dfs(rt_node *node, char *key, size_t klen,
+void rt_node_dfs(rt_node *node, unsigned char *key, size_t klen,
 		void *usr_ctxt,
-		void (*mapfunc)(void *, char *, size_t, void *))
+		void (*mapfunc)(void *, unsigned char *, size_t, void *))
 {
-	char *ptr = key+klen;
+	unsigned char *ptr = key+klen;
 	size_t len;
 	uint8_t child;
 	rt_node **next;
 	if(!node) return;
 	len = node->klen;
 	if(klen+len > MAX_KEY_LENGTH) len = MAX_KEY_LENGTH-klen;
-	strncpy(ptr,node->key,len);
+	memcpy(ptr,node->key,len);
 	ptr[len] = 0;
 	len += klen;
 	if(node->value) mapfunc(usr_ctxt, key, len, node->value);
@@ -443,10 +446,10 @@ void rt_node_dfs(rt_node *node, char *key, size_t klen,
 }
 
 void rt_tree_map(rt_tree *tree, void *usr_ctxt,
-		void (*mapfunc)(void *usr_ctxt, char *key,
+		void (*mapfunc)(void *usr_ctxt, unsigned char *key,
 			size_t klen, void *value))
 {
-	char key[MAX_KEY_LENGTH+1];
+	unsigned char key[MAX_KEY_LENGTH+1];
 	rt_node *n;
 	if(!mapfunc || !tree) return;
 	n = tree->root;

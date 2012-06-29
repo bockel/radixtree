@@ -27,9 +27,9 @@ typedef struct {
 } ctxt;
 
 void
-print_node(void *user_ctxt, char *key, size_t klen, void *value)
+print_node(void *user_ctxt, unsigned char *key, size_t klen, void *value)
 {
-	if(!strcmp(key,(char*)value))
+	if(!strcmp((char*)key,(char*)value))
 #ifdef DEBUG
 		printf("\t[%lu] %.*s(%lu) = %s\n", ++((ctxt *)user_ctxt)->ncount, (int)klen, key, klen, (char *)value);
 	else
@@ -56,7 +56,7 @@ main(int argc, char **argv)
 	}
 	for(i=1,arg=argv+1;i<argc;i++,arg++)
 	{
-		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
+		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 			succ++;
 #ifdef DEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);

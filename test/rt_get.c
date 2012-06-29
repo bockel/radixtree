@@ -1,4 +1,5 @@
 
+
 /*
  * Copyright 2012 William Heinbockel
  *
@@ -26,8 +27,8 @@ main(int argc, char **argv)
 {
 	rt_tree *t;
 	char **arg;
+	unsigned char *val;
 	int i, succ=0;
-	rt_iter *iter;
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
@@ -38,7 +39,7 @@ main(int argc, char **argv)
 	}
 	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
 	{
-		if(rt_tree_set(t, *arg, strlen(*arg), *arg))
+		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 			succ++;
 #ifdef DEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
@@ -47,27 +48,21 @@ main(int argc, char **argv)
 #ifdef DEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
-	printf("Searching for \"%s\"...\n", *arg);
+	printf("Searching for \"%s\"... ", *arg);
 #endif
 	if(succ!=argc-2) {
 		rt_tree_free(t);
 		return (-1);
 	}
-	iter = rt_tree_prefix(t, *arg, strlen(*arg));
-	succ=0;
-	if(iter) {
-		while(rt_iter_next(iter)) {
-			succ++;
+	succ = rt_tree_get(t, (unsigned char *)*arg, strlen(*arg), (void **)&val);
 #ifdef DEBUG
-			printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),(char *)rt_iter_value(iter));
-#endif
-		}
-	}
-#ifdef DEBUG
-	else printf("FAILED\n");
+	if(succ) {
+		if(!val) printf("FAILED (%d, got NULL)\n",succ);
+		else if(!strcmp((char*)val,*arg)) printf("SUCCESS\n");
+		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
+	} else printf("FAILED\n");
 #endif
 
 	rt_tree_free(t);
 	return succ;
 }
-
