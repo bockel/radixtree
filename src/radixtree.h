@@ -71,6 +71,7 @@ void rt_tree_free(rt_tree *t);
 
 int rt_tree_get(const rt_tree *t, const unsigned char *key, size_t lkey, void ** value);
 int rt_tree_set(const rt_tree *t, const unsigned char *key, size_t lkey, void *value);
+int rt_tree_remove(const rt_tree *t, const unsigned char *key, size_t lkey);
 void rt_tree_print(const rt_tree *t);
 
 rt_iter *rt_tree_prefix(const rt_tree *t, const unsigned char *prefix, size_t prefixlen);

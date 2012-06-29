@@ -326,6 +326,12 @@ rt_tree_set(const rt_tree *t, const unsigned char *key,
 	}
 }
 
+int
+rt_tree_remove(const rt_tree *t, const unsigned char *key, size_t lkey)
+{
+	return rt_tree_set(t,key,lkey,NULL);
+}
+
 void
 rt_tree_print(const rt_tree *t)
 {
