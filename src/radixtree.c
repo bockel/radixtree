@@ -292,23 +292,13 @@ rt_tree_free(rt_tree *t)
 	t->free(t);
 }
 
-int
-rt_tree_get(const rt_tree *t, const unsigned char *key,
-		size_t lkey, void ** value)
+void *
+rt_tree_get(const rt_tree *t, const unsigned char *key, size_t lkey)
 {
 	rt_node *n;
-	if(!t) {
-		*value = NULL;
-		return 0;
-	}
+	if(!t) return NULL;
 	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_GET);
-	if(n && n->value) {
-		*value = n->value;
-		return 1;
-	} else {
-		*value = NULL;
-		return 0;
-	}
+	return (n && n->value) ? n->value : NULL;
 }
 
 int
@@ -324,6 +314,19 @@ rt_tree_set(const rt_tree *t, const unsigned char *key,
 	} else {
 		return 0;
 	}
+}
+
+void *
+rt_tree_setdefault(const rt_tree *t, const unsigned char *key,
+		size_t lkey, void *value)
+{
+	rt_node *n;
+	if(!t) return NULL;
+	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_SET);
+	if(n) {
+		if(!n->value) n->value = value;
+		return n->value;
+	} else return NULL;
 }
 
 int

@@ -27,14 +27,12 @@ main(int argc, char **argv)
 {
 	rt_tree *t;
 	char **arg;
-	unsigned char *val;
+	char *val;
 	int i, succ=0;
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
-#ifdef DEBUG
 		printf("ERROR: Could not create rt_tree... Exiting\n");
-#endif
 		return (-1);
 	}
 	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
@@ -54,11 +52,10 @@ main(int argc, char **argv)
 		rt_tree_free(t);
 		return (-1);
 	}
-	succ = rt_tree_get(t, (unsigned char *)*arg, strlen(*arg), (void **)&val);
+	val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg));
 #ifdef DEBUG
-	if(succ) {
-		if(!val) printf("FAILED (%d, got NULL)\n",succ);
-		else if(!strcmp((char*)val,*arg)) printf("SUCCESS\n");
+	if(val) {
+		if(!strcmp(val,*arg)) printf("SUCCESS\n");
 		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
 	} else printf("FAILED\n");
 #endif

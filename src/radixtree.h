@@ -69,8 +69,10 @@ rt_tree * rt_tree_custom(	uint8_t albet_size,
 
 void rt_tree_free(rt_tree *t);
 
-int rt_tree_get(const rt_tree *t, const unsigned char *key, size_t lkey, void ** value);
+void * rt_tree_get(const rt_tree *t, const unsigned char *key, size_t lkey);
 int rt_tree_set(const rt_tree *t, const unsigned char *key, size_t lkey, void *value);
+void * rt_tree_setdefault(const rt_tree *t, const unsigned char *key, size_t lkey, void *value);
+
 int rt_tree_remove(const rt_tree *t, const unsigned char *key, size_t lkey);
 void rt_tree_print(const rt_tree *t);
 
