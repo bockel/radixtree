@@ -31,7 +31,7 @@ main(int argc, char **argv)
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
-#ifdef DEBUG
+#ifndef NDEBUG
 		printf("ERROR: Could not create rt_tree... Exiting\n");
 #endif
 		return (-1);
@@ -40,11 +40,11 @@ main(int argc, char **argv)
 	{
 		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 			succ++;
-#ifdef DEBUG
+#ifndef NDEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 #endif
 	}
-#ifdef DEBUG
+#ifndef NDEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
 	printf("Searching for \"%s\"...\n", *arg);
@@ -58,12 +58,12 @@ main(int argc, char **argv)
 	if(iter) {
 		while(rt_iter_next(iter)) {
 			succ++;
-#ifdef DEBUG
+#ifndef NDEBUG
 			printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),(char *)rt_iter_value(iter));
 #endif
 		}
 	}
-#ifdef DEBUG
+#ifndef NDEBUG
 	else printf("FAILED\n");
 #endif
 

@@ -73,6 +73,16 @@ void * rt_tree_get(const rt_tree *t, const unsigned char *key, size_t lkey);
 int rt_tree_set(const rt_tree *t, const unsigned char *key, size_t lkey, void *value);
 void * rt_tree_setdefault(const rt_tree *t, const unsigned char *key, size_t lkey, void *value);
 
+/**
+ * @def rt_tree_remove
+ *
+ * Removes the key @a key from radixtree @a t
+ * @param t The radixtree to remove the key from
+ * @param key The name of the key to remove
+ * @param lkey The length of the key @a key
+ *
+ * @returns 1 if the key was successfully removed; 0 otherwise
+ */
 int rt_tree_remove(const rt_tree *t, const unsigned char *key, size_t lkey);
 void rt_tree_print(const rt_tree *t);
 

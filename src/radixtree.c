@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 #include "radixtree.h"
 
 typedef struct _node rt_node;
@@ -126,8 +127,8 @@ static int
 rt_bsearch(const unsigned char *key, const rt_node **leaf,
 		size_t leafcnt, rt_node ***match)
 {
-	size_t left = 0, right = leafcnt, index;
-	int cmp;
+	size_t left = 0, right = leafcnt, index = 0;
+	int cmp = 0;
 	while(left < right)
 	{
 		index = (right+left)/2;
@@ -179,6 +180,7 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 	size_t len;
 	int diff;
 	if(!root || !n || !key || !ptr || ptr > key+lkey) return NULL;
+	assert(lkey <= strlen((char*)key));
 
 	len = lkey - (ptr - key);
 	if(n->lcnt == 0) {
@@ -332,7 +334,15 @@ rt_tree_setdefault(const rt_tree *t, const unsigned char *key,
 int
 rt_tree_remove(const rt_tree *t, const unsigned char *key, size_t lkey)
 {
-	return rt_tree_set(t,key,lkey,NULL);
+	rt_node *n;
+	if(!t) return 0;
+	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_GET);
+	if(n && n->value) {
+		n->value = NULL;
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 void

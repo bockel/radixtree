@@ -29,8 +29,8 @@ typedef struct {
 void
 print_node(void *user_ctxt, unsigned char *key, size_t klen, void *value)
 {
-	if(!strcmp((char*)key,(char*)value))
-#ifdef DEBUG
+	if(!strncmp((char*)key,(char*)value,klen))
+#ifndef NDEBUG
 		printf("\t[%lu] %.*s(%lu) = %s\n", ++((ctxt *)user_ctxt)->ncount, (int)klen, key, klen, (char *)value);
 	else
 		printf("FAILED (key(%s) != value(%s))\n", key, (char *)value);
@@ -49,7 +49,7 @@ main(int argc, char **argv)
 
 	t = rt_tree_new(ALSIZE,NULL);
 	if(!t) {
-#ifdef DEBUG
+#ifndef NDEBUG
 		printf("ERROR: Could not create rt_tree... Exiting\n");
 #endif
 		return (-1);
@@ -58,11 +58,11 @@ main(int argc, char **argv)
 	{
 		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 			succ++;
-#ifdef DEBUG
+#ifndef NDEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 #endif
 	}
-#ifdef DEBUG
+#ifndef NDEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-1);
 	rt_tree_print(t);
 #endif
@@ -72,7 +72,7 @@ main(int argc, char **argv)
 	}
 	context.ncount = 0;
 	rt_tree_map(t, &context, print_node);
-#ifdef DEBUG
+#ifndef NDEBUG
 	printf("%s... Found %lu of %d\n", context.ncount==((size_t)argc)-1?"SUCCESS":"FAILURE", context.ncount, argc-1);
 #endif
 

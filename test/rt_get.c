@@ -39,11 +39,11 @@ main(int argc, char **argv)
 	{
 		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 			succ++;
-#ifdef DEBUG
+#ifndef NDEBUG
 		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 #endif
 	}
-#ifdef DEBUG
+#ifndef NDEBUG
 	printf("ADD Passed: %d of %d\n",succ,argc-2);
 	rt_tree_print(t);
 	printf("Searching for \"%s\"... ", *arg);
@@ -54,7 +54,7 @@ main(int argc, char **argv)
 	}
 	val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg));
 	succ = val ? strcmp(val,*arg) : 1;
-#ifdef DEBUG
+#ifndef NDEBUG
 	if(val) {
 		if(!succ) printf("SUCCESS\n");
 		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);

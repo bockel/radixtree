@@ -21,7 +21,8 @@
 #define ALPHABET "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 #define ALSIZE (strlen(ALPHABET))
 
-#ifdef DEBUG
+#ifndef NDEBUG
+#define DEBUG
 #define _DEBUG(x,...) printf(x,__VA_ARGS__)
 #else
 #define _DEBUG(x,...)
@@ -52,7 +53,7 @@ main(int argc, char **argv)
 		{
 			if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
 				succ++;
-			else _DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+			else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
 		}
 	} else {
 		char *r;
@@ -61,7 +62,7 @@ main(int argc, char **argv)
 		{
 			if((r = rt_tree_setdefault(t, (unsigned char *)*arg, strlen(*arg), *arg)) != NULL) {
 				if(r == *arg) succ++;
-			} else _DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+			} else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
 		}
 	}
 #ifdef DEBUG
@@ -78,9 +79,9 @@ main(int argc, char **argv)
 		char *val;
 		if((val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg))) != NULL) {
 			if(!strcmp(val,*arg)) succ++;
-			else _DEBUG("!!! Value mismatch (%s != %s)\n",val,*arg);
+			else{_DEBUG("!!! Value mismatch (%s != %s)\n",val,*arg);}
 		}
-		else _DEBUG("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);
+		else{_DEBUG("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);}
 	}
 	_DEBUG("SEARCH Passed: %d of %d\n",succ,argc-def-1);
 
