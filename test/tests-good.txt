@@ -1,0 +1,7 @@
+./rt_build a 1 123 23 132
+./rt_build abcde abcdf abcef a ac abc 1 123 23 132
+./rt_prefix a abcd abcb abca abd abe bcd bce bcf bcfg ab
+./rt_prefix a abc abd abe bcd bce bcf bcfg b
+./rt_build a abc abcdef acdef
+./rt_build a abc abcdef acdef
+./rt_build a b c d e f g h i j k l A B Abc ABc ABC

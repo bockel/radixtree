@@ -68,6 +68,6 @@ main(int argc, char **argv)
 #endif
 
 	rt_tree_free(t);
-	return succ;
+	return succ > 0;
 }
 

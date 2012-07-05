@@ -1,35 +1,30 @@
 RTDIR = ../src
-PROGS =
-UTILS = rt_build rt_get rt_prefix rt_map
-CFLAGS = -I$(RTDIR)
-CFLAGS += -Wall
+UTILS = rt_build rt_get rt_prefix rt_map rt_unit_test
+CFLAGS = -I$(RTDIR) -Wall -Wextra
 CFLAGS += ${EXTRA_CFLAGS}
 
 ifeq ($(mode),release)
 	CFLAGS += -O2
 else
 	mode = debug
-	CFLAGS += -O0 -g
+	CFLAGS += -O0 -g -DDEBUG
 endif
-
-TEST_TARGET = run_tests
-TESTS=./do_tests
 
 all: $(UTILS)
 
-radixtree.o :
+radixtree.o : $(RTDIR)/radixtree.c
 	$(CC) -c $(CFLAGS) $(RTDIR)/radixtree.c
 
 cplusplus:
 	cc=$(CXX) $(MAKE) all
 
-$(PROGS) $(UTILS) : radixtree.o
+$(UTILS) : radixtree.o
 	$(CC) $(CFLAGS) radixtree.o -o $@ $(@).c
 
+.PHONY: clean check
+
 check: all
-
-
-.PHONY: clean
+	sh run_check.sh
 
 clean:
-	rm -f $(UTILS) $(PROGS) *.o
+	rm -f $(UTILS) *.o

@@ -53,13 +53,13 @@ main(int argc, char **argv)
 		return (-1);
 	}
 	val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg));
+	succ = val ? strcmp(val,*arg) : 1;
 #ifdef DEBUG
 	if(val) {
-		if(!strcmp(val,*arg)) printf("SUCCESS\n");
+		if(!succ) printf("SUCCESS\n");
 		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
 	} else printf("FAILED\n");
 #endif
 
-	rt_tree_free(t);
-	return succ;
+	return succ==0;
 }

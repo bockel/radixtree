@@ -73,10 +73,10 @@ main(int argc, char **argv)
 	context.ncount = 0;
 	rt_tree_map(t, &context, print_node);
 #ifdef DEBUG
-	printf("%s... Found %lu of %d\n", context.ncount==argc-1?"SUCCESS":"FAILURE", context.ncount, argc-1);
+	printf("%s... Found %lu of %d\n", context.ncount==((size_t)argc)-1?"SUCCESS":"FAILURE", context.ncount, argc-1);
 #endif
 
 	rt_tree_free(t);
-	return context.ncount==argc-1;
+	return context.ncount==((size_t)argc)-1;
 }
 
