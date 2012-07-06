@@ -31,60 +31,62 @@
 int
 main(int argc, char **argv)
 {
-	rt_tree *t;
-	char **arg;
-	int i, succ=0, def=0;
+    rt_tree *t;
+    char **arg;
+    int i, succ=0, def=0;
 
-	t = rt_tree_new(ALSIZE,NULL);
-	if(!t) {
-		printf("ERROR: Could not create rt_tree... Exiting\n");
-		return (-1);
-	}
-	arg = argv+1;
-	i = 1;
-	if(argc>1 && *arg && !strcmp(*arg,"-d")) {
-		def = 1;
-		arg++; i++;
-	}
+    t = rt_tree_new(ALSIZE,NULL);
+    if(!t) {
+        printf("ERROR: Could not create rt_tree... Exiting\n");
+        return (-1);
+    }
+    arg = argv+1;
+    i = 1;
+    if(argc>1 && *arg && !strcmp(*arg,"-d")) {
+        def = 1;
+        arg++; i++;
+    }
 
-	if(!def) {
-		_DEBUG("Using rt_tree_set(%d)\n",def);
-		for(;i<argc;i++,arg++)
-		{
-			if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
-				succ++;
-			else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
-		}
-	} else {
-		char *r;
-		_DEBUG("Using rt_tree_setdefault(%d)\n",def);
-		for(;i<argc;i++,arg++)
-		{
-			if((r = rt_tree_setdefault(t, (unsigned char *)*arg, strlen(*arg), *arg)) != NULL) {
-				if(r == *arg) succ++;
-			} else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
-		}
-	}
+    if(!def) {
+        _DEBUG("Using rt_tree_set(%d)\n",def);
+        for(;i<argc;i++,arg++)
+        {
+            if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
+                succ++;
+            else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
+        }
+    } else {
+        char *r;
+        _DEBUG("Using rt_tree_setdefault(%d)\n",def);
+        for(;i<argc;i++,arg++)
+        {
+            if((r = rt_tree_setdefault(t, (unsigned char *)*arg,
+                            strlen(*arg), *arg)) != NULL) {
+                if(r == *arg) succ++;
+            } else{_DEBUG("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);}
+        }
+    }
 #ifdef DEBUG
-	printf("ADD Passed: %d of %d\n",succ,argc-def-1);
-	rt_tree_print(t);
+    printf("ADD Passed: %d of %d\n",succ,argc-def-1);
+    rt_tree_print(t);
 #endif
-	if(succ!=argc-def-1) {
-		rt_tree_free(t);
-		return (-1);
-	}
-	succ = 0;
-	for(i=argc-def-1,arg--;i>0;i--,arg--)
-	{
-		char *val;
-		if((val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg))) != NULL) {
-			if(!strcmp(val,*arg)) succ++;
-			else{_DEBUG("!!! Value mismatch (%s != %s)\n",val,*arg);}
-		}
-		else{_DEBUG("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);}
-	}
-	_DEBUG("SEARCH Passed: %d of %d\n",succ,argc-def-1);
+    if(succ!=argc-def-1) {
+        rt_tree_free(t);
+        return (-1);
+    }
+    succ = 0;
+    for(i=argc-def-1,arg--;i>0;i--,arg--)
+    {
+        char *val;
+        if((val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg)))
+                != NULL) {
+            if(!strcmp(val,*arg)) succ++;
+            else{_DEBUG("!!! Value mismatch (%s != %s)\n",val,*arg);}
+        }
+        else{_DEBUG("!!! Searching for \"%s\"(arg[%d])... FAILED\n",*arg,i);}
+    }
+    _DEBUG("SEARCH Passed: %d of %d\n",succ,argc-def-1);
 
-	rt_tree_free(t);
-	return succ==argc-def-1;
+    rt_tree_free(t);
+    return succ==argc-def-1;
 }

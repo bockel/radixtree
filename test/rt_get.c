@@ -25,41 +25,41 @@
 int
 main(int argc, char **argv)
 {
-	rt_tree *t;
-	char **arg;
-	char *val;
-	int i, succ=0;
+    rt_tree *t;
+    char **arg;
+    char *val;
+    int i, succ=0;
 
-	t = rt_tree_new(ALSIZE,NULL);
-	if(!t) {
-		printf("ERROR: Could not create rt_tree... Exiting\n");
-		return (-1);
-	}
-	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
-	{
-		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
-			succ++;
+    t = rt_tree_new(ALSIZE,NULL);
+    if(!t) {
+        printf("ERROR: Could not create rt_tree... Exiting\n");
+        return (-1);
+    }
+    for(i=1,arg=argv+1;i<argc-1;i++,arg++)
+    {
+        if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
+            succ++;
 #ifndef NDEBUG
-		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+        else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 #endif
-	}
+    }
 #ifndef NDEBUG
-	printf("ADD Passed: %d of %d\n",succ,argc-2);
-	rt_tree_print(t);
-	printf("Searching for \"%s\"... ", *arg);
+    printf("ADD Passed: %d of %d\n",succ,argc-2);
+    rt_tree_print(t);
+    printf("Searching for \"%s\"... ", *arg);
 #endif
-	if(succ!=argc-2) {
-		rt_tree_free(t);
-		return (-1);
-	}
-	val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg));
-	succ = val ? strcmp(val,*arg) : 1;
+    if(succ!=argc-2) {
+        rt_tree_free(t);
+        return (-1);
+    }
+    val = (char*)rt_tree_get(t, (unsigned char *)*arg, strlen(*arg));
+    succ = val ? strcmp(val,*arg) : 1;
 #ifndef NDEBUG
-	if(val) {
-		if(!succ) printf("SUCCESS\n");
-		else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
-	} else printf("FAILED\n");
+    if(val) {
+        if(!succ) printf("SUCCESS\n");
+        else printf("!!! Value mismatch (%s != %s)\n",val,*arg);
+    } else printf("FAILED\n");
 #endif
 
-	return succ==0;
+    return succ==0;
 }

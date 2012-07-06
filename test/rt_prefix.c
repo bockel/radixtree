@@ -24,50 +24,51 @@
 int
 main(int argc, char **argv)
 {
-	rt_tree *t;
-	char **arg;
-	int i, succ=0;
-	rt_iter *iter;
+    rt_tree *t;
+    char **arg;
+    int i, succ=0;
+    rt_iter *iter;
 
-	t = rt_tree_new(ALSIZE,NULL);
-	if(!t) {
+    t = rt_tree_new(ALSIZE,NULL);
+    if(!t) {
 #ifndef NDEBUG
-		printf("ERROR: Could not create rt_tree... Exiting\n");
+        printf("ERROR: Could not create rt_tree... Exiting\n");
 #endif
-		return (-1);
-	}
-	for(i=1,arg=argv+1;i<argc-1;i++,arg++)
-	{
-		if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
-			succ++;
+        return (-1);
+    }
+    for(i=1,arg=argv+1;i<argc-1;i++,arg++)
+    {
+        if(rt_tree_set(t, (unsigned char *)*arg, strlen(*arg), *arg))
+            succ++;
 #ifndef NDEBUG
-		else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
+        else printf("!!! Adding arg[%d] = %s... FAILED\n",i,*arg);
 #endif
-	}
+    }
 #ifndef NDEBUG
-	printf("ADD Passed: %d of %d\n",succ,argc-2);
-	rt_tree_print(t);
-	printf("Searching for \"%s\"...\n", *arg);
+    printf("ADD Passed: %d of %d\n",succ,argc-2);
+    rt_tree_print(t);
+    printf("Searching for \"%s\"...\n", *arg);
 #endif
-	if(succ!=argc-2) {
-		rt_tree_free(t);
-		return (-1);
-	}
-	iter = rt_tree_prefix(t, (unsigned char *)*arg, strlen(*arg));
-	succ=0;
-	if(iter) {
-		while(rt_iter_next(iter)) {
-			succ++;
+    if(succ!=argc-2) {
+        rt_tree_free(t);
+        return (-1);
+    }
+    iter = rt_tree_prefix(t, (unsigned char *)*arg, strlen(*arg));
+    succ=0;
+    if(iter) {
+        while(rt_iter_next(iter)) {
+            succ++;
 #ifndef NDEBUG
-			printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),(char *)rt_iter_value(iter));
+            printf("SUCCESS (%s) = %s\n",rt_iter_key(iter),
+                    (char *)rt_iter_value(iter));
 #endif
-		}
-	}
+        }
+    }
 #ifndef NDEBUG
-	else printf("FAILED\n");
+    else printf("FAILED\n");
 #endif
 
-	rt_tree_free(t);
-	return succ > 0;
+    rt_tree_free(t);
+    return succ > 0;
 }
 
