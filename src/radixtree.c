@@ -179,7 +179,8 @@ rt_node_get(	const rt_tree *root, rt_node *n,
 	rt_node *node = NULL, **p;
 	size_t len;
 	int diff;
-	if(!root || !n || !key || !ptr || ptr > key+lkey) return NULL;
+	if(!root || !n || !key || lkey < 1 || !ptr || ptr > key+lkey)
+		return NULL;
 	assert(lkey <= strlen((char*)key));
 
 	len = lkey - (ptr - key);
@@ -308,7 +309,8 @@ rt_tree_set(const rt_tree *t, const unsigned char *key,
 		size_t lkey, void *value)
 {
 	rt_node *n;
-	if(!t) return 0;
+	/* rt_node_get will add the key, don't do this if value==NULL */
+	if(!t || !value) return 0;
 	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_SET);
 	if(n) {
 		n->value = value;
@@ -323,7 +325,8 @@ rt_tree_setdefault(const rt_tree *t, const unsigned char *key,
 		size_t lkey, void *value)
 {
 	rt_node *n;
-	if(!t) return NULL;
+	/* rt_node_get will add the key, don't do this if value==NULL */
+	if(!t || !value) return NULL;
 	n = rt_node_get(t,t->root,key,key,lkey<MAX_KEY_LENGTH?lkey:MAX_KEY_LENGTH,NODE_SET);
 	if(n) {
 		if(!n->value) n->value = value;
