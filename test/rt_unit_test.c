@@ -255,6 +255,67 @@ static status test7()
     return ret;
 }
 
+struct map_ctxt {
+    size_t fail;
+    size_t pass;
+    char *lkey;
+    char *lval;
+};
+
+static void map_cb(void *ctxt, unsigned char *key, size_t klen, void *value)
+{
+    struct map_ctxt *c = (struct map_ctxt *)ctxt;
+    if(!c) return;
+    if(key && value && klen > 0 && !strcmp((char*)key,(char*)value))
+        c->pass++;
+    else
+        c->fail++;
+    c->lkey = (char*)key;
+    c->lval = (char*)value;
+}
+
+/* test rt_tree_map() */
+static status test8()
+{
+    rt_tree *t;
+    char *val = "ABCDEFGH",*v2="012345",*r;
+    rt_iter *i;
+    int count = 0;
+    struct map_ctxt ctxt;
+    status ret = PASS;
+    t = rt_tree_new(16,NULL);
+    if(!t) return ERR;
+
+    ctxt.fail = 0;
+    ctxt.pass = 0;
+    ctxt.lkey = NULL;
+    ctxt.lval = NULL;
+
+    rt_tree_map(NULL,&ctxt,map_cb);
+    ASSERT(ctxt.fail==0 && ctxt.pass==0);
+    rt_tree_map(t,&ctxt,NULL);
+
+    ASSERT(rt_tree_set(t,"ABC",3,"ABC"));
+    ASSERT(rt_tree_set(t,"ACC",3,"ACC"));
+    ASSERT(rt_tree_set(t,"ACD",3,"ACD"));
+    ASSERT(rt_tree_set(t,"AZZ",3,"AZZ"));
+    ASSERT(rt_tree_set(t,"ABC",2,"AB"));
+    ASSERT(rt_tree_set(t,"zzz",3,"zzz"));
+    ASSERT(rt_tree_set(t,"ABC",1,"A"));
+    ASSERT(rt_tree_set(t,"BAC",3,"BAC"));
+    ASSERT(rt_tree_set(t,"abc",3,"abc"));
+
+    rt_tree_map(t,&ctxt,map_cb);
+    ASSERT(ctxt.fail == 0);
+    ASSERT(ctxt.pass == 9);
+    ASSERT(ctxt.lkey && !strcmp(ctxt.lkey,"zzz"));
+    ASSERT(ctxt.lval && !strcmp(ctxt.lval,"zzz"));
+
+    if(!t) return ERR;
+    rt_tree_free(t);
+    return ret;
+}
+
 int
 main()
 {
@@ -267,6 +328,7 @@ main()
     TEST(test5());
     TEST(test6());
     TEST(test7());
+    TEST(test8());
 
 #ifndef NDEBUG
     printf("%s: Passed %u of %u tests\n",

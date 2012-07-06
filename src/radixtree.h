@@ -58,10 +58,12 @@ extern "C" {
 typedef struct _rt_tree rt_tree;
 typedef struct _rt_iter rt_iter;
 
-rt_tree * rt_tree_new(  uint8_t albet_size,
+rt_tree * rt_tree_new(
+        uint8_t albet_size,
         void (*_vfree)(void*));
 
-rt_tree * rt_tree_custom(   uint8_t albet_size,
+rt_tree * rt_tree_custom(
+        uint8_t albet_size,
         void (*_vfree)(void*),
         void* (*_malloc)(size_t),
         void* (*_realloc)(void *,size_t),
@@ -69,16 +71,19 @@ rt_tree * rt_tree_custom(   uint8_t albet_size,
 
 void rt_tree_free(rt_tree *t);
 
-void * rt_tree_get(const rt_tree *t,
+void * rt_tree_get(
+        const rt_tree *t,
         const unsigned char *key,
         size_t lkey);
 
-int rt_tree_set(const rt_tree *t,
+int rt_tree_set(
+        const rt_tree *t,
         const unsigned char *key,
         size_t lkey,
         void *value);
 
-void * rt_tree_setdefault(const rt_tree *t,
+void * rt_tree_setdefault(
+        const rt_tree *t,
         const unsigned char *key,
         size_t lkey,
         void *value);
@@ -93,13 +98,15 @@ void * rt_tree_setdefault(const rt_tree *t,
  *
  * @returns 1 if the key was successfully removed; 0 otherwise
  */
-int rt_tree_remove(const rt_tree *t,
+int rt_tree_remove(
+        const rt_tree *t,
         const unsigned char *key,
         size_t lkey);
 
 void rt_tree_print(const rt_tree *t);
 
-rt_iter *rt_tree_prefix(const rt_tree *t,
+rt_iter *rt_tree_prefix(
+        const rt_tree *t,
         const unsigned char *prefix,
         size_t prefixlen);
 
@@ -109,7 +116,9 @@ const unsigned char *rt_iter_key(const rt_iter *iter);
 
 const void *rt_iter_value(const rt_iter *iter);
 
-void rt_tree_map(rt_tree *tree, void *usr_ctxt,
+void rt_tree_map(
+        rt_tree *tree,
+        void *usr_ctxt,
         void (*mapfunc)(void *usr_ctxt,
             unsigned char *key,
             size_t klen,
