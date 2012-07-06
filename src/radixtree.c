@@ -384,12 +384,13 @@ rt_tree_prefix(const rt_tree *t, const unsigned char *prefix,
         size_t prefixlen)
 {
     static rt_iter iter;
-    rt_node *result;
+    rt_node *result = NULL;
     if(!t) return NULL;
-
-    result = rt_node_get(t, t->root, prefix, prefix, 
-            prefixlen<MAX_KEY_LENGTH?prefixlen:MAX_KEY_LENGTH, NODE_PREFIX);
-    if(!result) return NULL;
+    if(!prefix || prefixlen < 1)
+        result = t->root;
+    else
+        result = rt_node_get(t, t->root, prefix, prefix,
+                prefixlen<MAX_KEY_LENGTH?prefixlen:MAX_KEY_LENGTH,NODE_PREFIX);
 
     iter.root = result;
     iter.curr = NULL;
@@ -402,7 +403,7 @@ rt_iter_next(rt_iter *iter)
 {
     rt_node *c,**t;
     unsigned char *pkey;
-    if(!iter) return 0;
+    if(!iter || !iter->root) return 0;
     if(iter->curr == NULL) {
         iter->curr = (rt_node*)iter->root;
         if(iter->root->value != NULL) return 1;
@@ -476,6 +477,7 @@ rt_iter_key(const rt_iter *iter)
 const void *
 rt_iter_value(const rt_iter *iter)
 {
+    if(!iter || !iter->curr) return NULL;
     return iter->curr ? iter->curr->value : NULL;
 }
 
