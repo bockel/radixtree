@@ -222,6 +222,7 @@ static status test7()
         ASSERT(!strcmp((char*)rt_iter_value(i),"ABC"));
     }
     ASSERT(count == 6);
+    rt_iter_free(i);
 
     /* this should still be set to the last valid node */
     ASSERT(!strcmp((char*)rt_iter_key(i),"AZZ"))
@@ -236,8 +237,9 @@ static status test7()
         ASSERT(rt_iter_value(i));
     }
     ASSERT(count == 9);
+    rt_iter_free(i);
 
-    i = rt_tree_prefix(t,"A",0);
+    i = rt_tree_prefix(t,NULL,0);
     count = 0;
     while(rt_iter_next(i)) {
         count++;
@@ -245,6 +247,7 @@ static status test7()
         ASSERT(rt_iter_value(i));
     }
     ASSERT(count == 9);
+    rt_iter_free(i);
 
     /* this should still be set to the last valid node */
     ASSERT(!strcmp((char*)rt_iter_key(i),"zzz"))

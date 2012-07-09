@@ -62,7 +62,7 @@ rt_tree * rt_tree_new(
         uint8_t albet_size,
         void (*_vfree)(void*));
 
-rt_tree * rt_tree_custom(
+rt_tree * rt_tree_malloc(
         uint8_t albet_size,
         void (*_vfree)(void*),
         void* (*_malloc)(size_t),
@@ -115,6 +115,8 @@ int rt_iter_next(rt_iter *iter);
 const unsigned char *rt_iter_key(const rt_iter *iter);
 
 const void *rt_iter_value(const rt_iter *iter);
+
+void rt_iter_free(rt_iter *iter);
 
 void rt_tree_map(
         rt_tree *tree,

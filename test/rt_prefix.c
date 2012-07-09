@@ -53,6 +53,7 @@ main(int argc, char **argv)
         rt_tree_free(t);
         return (-1);
     }
+
     iter = rt_tree_prefix(t, (unsigned char *)*arg, strlen(*arg));
     succ=0;
     if(iter) {
@@ -63,6 +64,7 @@ main(int argc, char **argv)
                     (char *)rt_iter_value(iter));
 #endif
         }
+        rt_iter_free(iter);
     }
 #ifndef NDEBUG
     else printf("FAILED\n");

@@ -47,6 +47,8 @@ struct _rt_iter {
     const rt_tree *t;
     const rt_node *root;
     rt_node *curr;
+    void (*free)(void *);      /* iter free callback */
+    unsigned char key[MAX_KEY_LENGTH+1];
 };
 
 static void
@@ -122,10 +124,11 @@ _maxmatch(const unsigned char *key, const unsigned char *match, size_t len)
 }
 
 /*
- * Implement a custom binary search that returns the last search location.
- * This location is either a match or the location where the node should
- * be inserted [+-] 1
+ * Implement a custom binary search that returns the last search
+ * location. This location is either a match or the location
+ * where the node should be inserted [+-] 1
  */
+
 static int
 rt_bsearch(const unsigned char *key, const rt_node **leaf,
         size_t leafcnt, rt_node ***match)
@@ -247,10 +250,13 @@ rt_node_get(    const rt_tree *root, rt_node *n,
 
     } else if(mode==NODE_SET) {
         size_t offset = p - n->leaf;
+
         /* rt_node_grow may realloc the n->leaf location
-         * 1 save the p offset
-         * 2 redeclare p based on the new n->leaf location and offset
+         * 1. save the p offset
+         * 2. redeclare p based on the new n->leaf location and
+         *    offset
          */
+
         if(mode == NODE_SET
                 && n->lcnt >= n->lalloc
                 && rt_node_grow(root,n)<1) {
@@ -278,11 +284,11 @@ rt_node_get(    const rt_tree *root, rt_node *n,
 rt_tree *
 rt_tree_new(uint8_t albet_size, void (*_vfree)(void*))
 {
-    return rt_tree_custom(albet_size, _vfree, malloc, realloc, free);
+    return rt_tree_malloc(albet_size, _vfree, malloc, realloc, free);
 }
 
 rt_tree *
-rt_tree_custom( uint8_t albet_size,
+rt_tree_malloc( uint8_t albet_size,
         void (*_vfree)(void*),
         void* (*_malloc)(size_t),
         void* (*_realloc)(void *,size_t),
@@ -383,7 +389,7 @@ rt_iter *
 rt_tree_prefix(const rt_tree *t, const unsigned char *prefix,
         size_t prefixlen)
 {
-    static rt_iter iter;
+    rt_iter *iter;
     rt_node *result = NULL;
     if(!t) return NULL;
     if(!prefix || prefixlen < 1)
@@ -392,10 +398,19 @@ rt_tree_prefix(const rt_tree *t, const unsigned char *prefix,
         result = rt_node_get(t, t->root, prefix, prefix,
                 prefixlen<MAX_KEY_LENGTH?prefixlen:MAX_KEY_LENGTH,NODE_PREFIX);
 
-    iter.root = result;
-    iter.curr = NULL;
-    iter.t = t;
-    return &iter;
+    iter = t->malloc(sizeof(*iter));
+    if(!iter) return NULL;
+    iter->root = result;
+    iter->curr = NULL;
+    iter->t = t;
+    iter->free = t->free;
+    return iter;
+}
+
+void
+rt_iter_free(rt_iter *iter)
+{
+    if(iter && iter->free) iter->free(iter);
 }
 
 int
@@ -453,14 +468,14 @@ const unsigned char *
 rt_iter_key(const rt_iter *iter)
 {
     rt_node *n;
-    static unsigned char ret[MAX_KEY_LENGTH+1], *ptr;
+    static unsigned char *ptr;
     size_t len = MAX_KEY_LENGTH,i;
-    if(!iter || !iter->curr) return NULL;
+    if(!iter || !iter->curr || !iter->key) return NULL;
 
     /* This builds up the string by traversing the tree
      * from the current node to the root.
      */
-    ptr = ret+MAX_KEY_LENGTH;
+    ptr = iter->key+MAX_KEY_LENGTH;
     *ptr = 0; ptr--;
     n = iter->curr;
     while(len>0 && n) {

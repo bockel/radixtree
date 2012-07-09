@@ -3,9 +3,11 @@ UTILS = rt_build rt_get rt_prefix rt_map
 UNIT_TEST = rt_unit_test
 CFLAGS = -I$(RTDIR) -Wall -Wextra
 CFLAGS += ${EXTRA_CFLAGS}
+OUTPUT = ""
 
 ifeq ($(mode),release)
 	CFLAGS += -O2 -D_FORTIFY_SOURCE=2 -fexceptions -DNDEBUG
+	OUTPUT = 2>&1 > /dev/null
 else
 	mode = debug
 	CFLAGS += -O0 -g
@@ -28,7 +30,7 @@ $(UNIT_TEST) : radixtree.o
 .PHONY: clean check
 
 check: all
-	sh run_check.sh
+	sh run_check.sh $(OUTPUT)
 
 clean:
 	rm -f $(UTILS) *.o
